@@ -1,0 +1,81 @@
+/* Default styling for "facepile" */
+
+#team-list {
+  position: relative;
+  margin: 0px;
+  padding: 0px;
+  margin-top: 20px;
+}
+
+#team-list li {
+  list-style: none;
+  margin: 0px;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.right h2 {
+  margin-top: 0px;
+  padding: 0px;
+}
+
+.right li {
+  display: inline-block;
+}
+
+.right ul {
+  padding: 0px;
+  margin: 0px;
+}
+
+#team-list > li {
+  margin-top: 20px;
+}
+
+.profile .left, .profile .right {
+  margin: 0px;
+  padding: 0px;
+  padding-bottom: 10px;
+}
+
+.profile .left {
+  vertical-align: top;
+  
+  /* Adjusted in wide/profiles.css */
+  text-align: left;
+}
+
+.profile .left img {
+  margin-bottom: 2px;
+}
+
+.profile .right {
+  left: 0px;
+  border: none;
+}
+
+
+/* Adjustments for wide screens */
+
+@media (min-width:960px) {
+  .profile {
+    border-width: 1px;
+    padding: 20px;
+  }
+  
+  /* Adjust width of right half of profiles */
+  .profile .right {
+    width: 80%;
+  }
+  
+  /* Make profiles nicer */
+  
+  .profile > div {
+    display: inline-block;
+  }
+  
+  .profile .left {
+    padding-right: 20px;
+    text-align: center;
+  }
+}

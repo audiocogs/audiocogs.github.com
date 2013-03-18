@@ -1,0 +1,167 @@
+---
+title: Why HTML5 Media is not Enough
+date: November 30, 2011
+layout: post
+author: Amos Wenger (@nddrylliog)
+---
+
+{% include ofmlabs-archive.markdown %}
+
+## Once upon a time in Dublin
+
+I'm taking the time to write these few lines on the plane back from Dublin, absolutely
+pumped by the week-end we just lived together.
+
+[ofmlabs](http://ofmlabs.org) has been having regular meetings with its core members and invited individuals
+since day one. Since we live in Switzerland, Sweden, Germany, Finland, and the USA, we
+like to take the time to see each other in person and have productive 48h hackathons.
+
+This week-end was different: for the first time, a start-up generously offered office
+space to the six europeans of us and our guests. Eamon Leonard, co-founder of [orchestra.io](http://orchestra.io),
+expressed his belief in our work and the open web, and was happy to contribute by [hosting us][picset]!
+
+[orchestra.io](http://orchestra.io) is a scalable PHP hosting platform, recently acquired by [Engine Yard](http://engineyard.com).
+It might seem like we are into very different businesses here, yet we all have a common
+goal here: to help the web mature into a strong and usable platform.
+
+While great strides of progress have been made, we believe that in the area of audio
+and video, there is definitely a lot of room for improvement. As I tried to explain
+in my [jsconf.eu talk][talk], the HTML5 audio tag still has a long way to go to even reach
+feature parity with proprietary technology such as Adobe Flash.
+
+[Mark Boas](http://twitter.com/maboa), of [Happyworm](http://happyworm.com), whom we were happy
+to welcome in our coding party, can tell you about the amount of work he and his
+associate have put into [jPlayer](http://jplayer.org) merely to work around implementation bugs in the audio
+and video tags in modern browsers.
+
+Even when just considering the leading edge duo of browsers, Chrome and Firefox,
+building consistent solutions on the web involving multimedia without Flash is
+still a challenge today. As for other browsers, the web community at large is looking
+forward to the IE team continuing its efforts reaching out to developers to better
+understand their needs. The [Opera](http://opera.com) team can be praised for committing very closely to
+the specifications, even when other browsers clearly went their own way.
+
+## Flash vs the world
+
+Just today I learned about the [Occupy Flash]() movement. While my heart yearns for the
+quick death of Flash, it still holds the edge in multimedia on the web, and for good reasons.
+All the major streaming platforms still use Flash to stream their content.
+At the time of this writing, Flash is the only answer for problems like stream encryption,
+live broadcasting, etc. [YouTube](http://youtube.com/) has just recently started to take advantage
+of new Adobe Flash features such as seamless transition between quality settings.
+
+Building the web is a long and tedious task. Organizations like the [W3C](http://w3.org) and the
+[WHAT-WG](http://www.whatwg.org) assemble dozens of big companies, all with their own corporate interests and often
+vigorous point of views on the questions being discussed. Good intentions from individual developers
+are not enough. A recent W3C discussion thread tried to raise awareness about the disconnect between
+standards organizations and web developers all around.
+
+Trying to free the web of proprietary plugins is a noble goal to which we are committed.
+But it would be dishonest to strip people of the interactivity they have gotten used to, if we
+have no acceptable solution to offer them in exchange.
+
+Technology such as Flash can evolve very quickly. With the recent announcement of Flash being
+discontinued on mobile devices (as a plugin, but still present in Air applications), I don't
+think anybody saw the seamless quality transition feature coming. I certainly didn't. Yet,
+it is so very easy to come up with a new cool feature when you are on your own, not having
+to reach consensus with a big group of companies having sometimes misaligned interests.
+
+How long until such a feature hits HTML5 audio and video? From where we are standing, it
+feels like forever. The W3C Audio Working group is experiencing difficulties. Scarce
+meetings (if any), decisions being made internally by companies disregarding the opinions
+of the working group, unwillingness to let individual developers express themselves...
+
+In the end, if no big company is interested in the same feature as you, individual developer,
+what can you do? For the time being, not much.
+
+## What standards are made of
+
+This is where the cracks begin to show in the way web standards and browsers are being developed.
+It is being presented as a democratic process where anyone can get involved, but the reality
+is big browser vendors negotiating interfaces so that the web doesn't explode from the
+fragmentation.
+
+Unfortunately, it is not only about politics. From a software engineering perspective, the
+current modularity of multimedia support in browsers leaves a lot to be desired. As often,
+it seems that only the minimal use case has been implemented: throwing a raw piece of
+audio/video in your page. The default player controls are often everything but polished.
+
+However, there is so much more to do with multimedia content than just a rectangle with a play
+button! This is is something people such as the [popcorn.js](http://popcornjs.org) team and web demoscene figure
+[mrdoob](http://mrdoob.com) keep showing in their work. The goal of all these additions
+to web browsers - seen not long ago as way to navigate text on steroids - is to be able
+to create rich, interactive multimedia compositions that will be able to reach an
+incredibly wide audience, now that the hardware and network infrastructures are available.
+
+When trying to make an apple pie, you don't go and buy a crumble, take the cooked apples
+out and use them in your new meal. You go and buy fresh apples at a grocery store, then
+cut them, arrange them to the pattern that you want, and cook them. Sure, they both have
+apples in them, but they are two very different food items, and it would be foolish to
+try and turn one into the other.
+
+That is exactly the problem with HTML5 audio and video elements. They are very tasty
+pieces of software, but they are not well adapted for every use case out there. Since they depend
+on the DOM, doing real-time audio processing with them is impossible due to delays,
+memory usage, etc. On certain platforms (I'm thinking mobile here), it's simply
+impossible to play several audio elements at once. It might be Apple trying to save native
+apps or just trying to preserve the overall performance of its devices, but it's a major
+show-stopper for HTML5 games.
+
+## Low-level multimedia APIs: the land of the free
+
+Once you get low-level access, i.e. you can directly write audio samples into the audio devices
+available, suddenly a world of possibilities open up. You can do multi-channel mixing
+yourself, for games or music sequencers. You can generate sound programmatically, like 
+in [audiolib.js][audiolib]. You can start playing sound samples exactly
+when you want, you can make a gapless music player if you want. You can mix generated sound
+with existing recording of instruments and noises. You can do *anything* with fresh apples.
+
+And guess what, we can already do that. Along with the HTML5 audio and video tag I have
+mentioned above, Chrome integrates the [Web Audio API][chromeapi], and Firefox integrates the [Audio Data API][ffapi].
+Using those APIs, you can write any audio data you want to your soundcard, just like we talked
+above. What are we complaining about, then? For one, there are two different APIs.
+
+The W3C Audio Working Group discussions haven't quite led to consensus yet. Both parties
+(Google and Mozilla) have strong beliefs about how web audio should be done. The Google
+argument is generally that doing audio processing in JavaScript is silly when it's so easy
+to provide readymade elements for common operations (such as FFT, Low/High-pass filters etc.).
+
+The Mozilla argument however, is that coming up with a list of components (i.e. nodes, in
+Google's API) that will stay relevant to audio for the years to come and fit every possible
+usecase is pretty hard. They argue that JavaScript is fast enough, and that power should be
+put in the hands of the users (that is, the web developers) so that they can develop their
+own components, and share them, allowing the web to even supersede the proprietary model
+(eg. Adobe) in velocity.
+
+And this is exactly our position. We have shown once, back in June, that JavaScript was
+fast enough to decode mp3 in realtime, [with jsmad](http://jsmad.org/), and play it back
+in the browser. To make it work in both Chrome and Firefox, we had to use [sink.js][sink],
+to abstract the differences between the audio APIs.
+
+## Where do we go from here?
+
+We are about to release more exciting open source software to the world soon. But after
+this weekend of hacking some more high-performance JavaScript code, we can only repeat
+our plea for a unified low-level Audio API, allowing simple write access to audio devices
+(capture would be great, but has more security implications). When it's standardized,
+no doubt Opera will implement it, and IE will eventually follow when it picks up steam.
+
+Until next week, take a look at [Broadway.js][broadway], an H.264 decoder in JavaScript,
+and [Route9.js][route9], a WebM/VP8 decoder in JavaScript. It's incredible, but in the
+current situation, it's becoming easier to implement codecs in JS than try to lobby
+vendors and figure out royalties. At least this makes for great hacks!
+
+You can also read [Mark Boas's article about low-level audio APIs][howlow], published earlier
+this year, which covers the same substance with a different prose.
+
+[picset]: http://www.flickr.com/photos/70976014@N04/sets/72157628194160521/
+[talk]: http://speakerrate.com/talks/8561-jsmad-what-why-how
+[chromeapi]: http://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html 
+[audiolib]: https://github.com/jussi-kalliokoski/audiolib.js/
+[sink]: https://github.com/jussi-kalliokoski/sink.js/
+[ffapi]: https://wiki.mozilla.org/Audio_Data_API
+[route9]: http://bemasc.net/wordpress/2011/11/30/route9-js/
+[broadway]: http://mbebenita.github.com/Broadway/broadway.html
+[howlow]: http://happyworm.com/blog/2011/11/15/html5-audio-apis-how-low-can-we-go/
+
+

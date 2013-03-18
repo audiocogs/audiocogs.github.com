@@ -1,0 +1,29 @@
+---
+title: Genesis
+date: August 2, 2011
+layout: post 
+author: Amos Wenger (@nddrylliog)
+---
+
+{% include ofmlabs-archive.markdown %}
+
+Music is a part of our daily lives. The Web has forever changed the way we interact. Audio in the browser has been a reality for quite some time, through [proprietary plug-ins](http://www.adobe.com/products/flashplayer/).
+
+But things are changing. [New](https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html), [powerful](https://wiki.mozilla.org/Audio_Data_API) APIs are being drafted. People are coming together to build better technology for everyone. On [GitHub](http://github.com/) alone, more than a million are collaborating.
+
+[Everyday](http://creativejs.com/), hackers come up with [demos](http://jsmad.org/) to show just how [powerful](https://github.com/devongovett/pdfkit) web browsers have become, using [Canvas](http://paperjs.org/), [SVG](http://raphaeljs.com/), [WebGL](https://github.com/mrdoob/three.js/), [File](http://www.w3.org/TR/FileAPI/), [Touch](http://www.html5rocks.com/en/mobile/touch.html), [Local Storage](http://diveintohtml5.org/storage.html), [Geo-location](http://dev.w3.org/geo/api/spec-source.html), [Video](http://www.jplayer.org/), [Audio](https://github.com/jussi-kalliokoski/audiolib.js), and even [Joystick](https://bugzilla.mozilla.org/show_bug.cgi?id=604039)!
+
+Pushing the web [forward](https://webfwd.org/) is not an easy task. Some W3C specifications have been on the battleground for [years](http://www.w3.org/Graphics/SVG/) before reaching an agreement. Some browsers lag behind in implementation of proposals.
+
+At ofmlabs, our mission is to:
+
+* Build open-source JavaScript libraries to abstract over browser differences
+* Collaborate with other projects to showcase the power of the web.
+
+[Official.fm](http://official.fm/) invested money so that a team of [8 persons](https://twitter.com/audiocogs/lists/team) around the world can spend most of their time working on [open-source projects](https://github.com/audiocogs/projects) to help the web grow up.
+
+We hang out <abbr title="#ofmlabs on Freenode">on IRC</abbr> and collaborate with fellow developers [on GitHub](https://github.com/audiocogs). We're interested in meeting JS hackers around the world, so drop by and chat a little, you're always welcome on our corner of the internet!
+
+Since we just launched, things are looking a little bare here, but we'll regularly post status updates on our work, with assorted demos. Follow us [on Twitter](http://twitter.com/audiocogs) if you want to have the inside scoop!
+
+**EDIT (2013-03-18):** we no longer hang out on the #ofmlabs IRC channel. You can find us on #audiocogs on Freenode.

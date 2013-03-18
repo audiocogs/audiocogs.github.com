@@ -1,0 +1,321 @@
+/* Default styling for entire site */
+
+/* Applies to all elements */
+* {
+  /* apply a natural box layout model to all elements */
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  
+  /* Default border color */
+  border: 0px solid #C8CED0;
+}
+
+/*
+ * See https://developer.mozilla.org/en/Images,_Tables,_and_Mysterious_Gaps
+ *+ for why this is needed. (it doesn't apply to just tables)
+ */
+a, img {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+/* Fixes for HTML5 docs in non-HTML5-compat browsers */
+header, footer, article, section {
+  display: block;
+}
+
+/* Main stuff */
+
+html, body {
+  background-color: #E9EAEB;
+  color: #292E30;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  font-family: Helvetica, Arial, Geneva, sans-serif;
+}
+
+body > section {
+  padding-bottom: 5px;
+}
+
+a img {
+  border: none;
+}
+
+/* Padding adjusted in medium/main.css */
+article {
+  padding: 0.5em;
+  line-height: 150%;
+}
+
+article li {
+  margin-top: 10px; 
+}
+
+#author_date {
+  margin-top: 0px;
+  padding-top: 0px;
+  padding-left: 15px;
+}
+
+#author_date:before {
+  content: '\2013'; /* en-dash */
+  opacity: 0.3;
+}
+
+.dark-gradient,
+.profile .bottom,
+header.main {
+  background: #141617;
+  background-image: -moz-linear-gradient(100% 100% 90deg, #141617, #343B3D);
+  background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#343B3D), to(#141617));
+  -moz-box-shadow:0 1px 3px rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow:0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow:0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+#content {
+  min-height: 100%;
+  background: #FFF;
+  border-width: 1px;
+  width: 100%;
+  max-width: 960px;
+  margin: auto;
+  margin-bottom: 12px; /* To match 52px top margin - 40px top bar */
+  padding-bottom: 5px; /* I'm not sure what this is matching, but it looks better this way */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: bold;
+  margin: 0;
+  margin-top: 0.3em;
+  font-size: 110%;
+}
+h1 { font-size: 170%; }
+h2 { font-size: 150%; }
+h3 { font-size: 130%; }
+
+#article_title { margin-bottom: 0; }
+
+a, abbr {
+  color: #394042;
+}
+
+abbr {
+  border-bottom: 1px #777 dotted;
+}
+
+/*
+ * "outline: none;" Hides the outline around selected elements.
+ *
+ * @CodeBlock's suggestion applied to "a:focus, a:active",
+ *+ but this makes it hard to navigate via keyboard.
+ *+ Using "a:hover" as I did only hides it when you click it,
+ *+ which is the only time I think it would be considered an annoyance.
+ */
+a:hover {
+  outline: none;
+  /*color: #fff;*/
+}
+
+header a {
+  color: #ddd;
+  text-decoration: none;
+}
+
+header a:hover {
+  text-decoration: underline;
+}
+
+/* Navigation */
+
+.title-nav {
+  height: 43px;
+  border-bottom-width: 1px;
+  background: #F1F3F3;
+  background-image: -moz-linear-gradient(100% 100% 90deg, #f1f3f3, #ffffff);
+  background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#ffffff), to(#f1f3f3));
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffffff', endColorstr='#f1f3f3');
+}
+
+.title-nav > * {
+  font-size: 100%;
+  color: #222;
+  margin: 0px;
+  padding: 7px;
+  padding: 0px;
+  display: inline-block;
+}
+
+.title-nav h1 {
+  float: left;
+  width: 470px;
+}
+
+.title-nav ul {
+  margin: auto;
+}
+
+.title-nav li {
+  display: table-cell;
+  margin: 0px;
+  padding: 0px;
+  border-right-width: 1px;
+}
+
+.title-nav a {
+  margin: 0px;
+  height: 42px;
+  padding-top: 12px;
+  padding-left: 10px;
+  padding-right: 10px;
+  text-decoration: none;
+
+  font-size: 100%;
+  color: #222;
+  background-color: transparent;
+  display: inline-block;
+}
+
+.title-nav li:hover {
+  border-bottom-width: 1px;
+}
+
+.title-nav a:hover {
+  color: #444;
+  background: #F1F3F3;
+  background-image: -moz-linear-gradient(100% 100% 90deg, #dfe3e3, #f1f3f3);
+  background-image: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#f1f3f3), to(#dfe3e3));
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#f1f3f3', endColorstr='#dfe3e3');
+}
+
+/* Top header */
+
+/* Header stays at top by default, made to float in wide/main.css */
+header.main {
+  top: 0px;
+  left: 0px;
+  min-height: 40px;
+  width: 100%;
+  
+  font-size: 90%;
+  z-index: 2;
+  
+  margin-bottom: 12px;
+}
+
+header.main h1 {
+  margin: 0;
+  padding: 0px;
+  margin-left: 0.3em;
+}
+
+header.main .inner {
+  position: relative;
+  margin: auto;
+  width: 100%;
+  max-width: 960px;
+  min-height: 40px;
+}
+
+#name, #social {
+  position: static;
+  display: inline-block;
+  padding: 5px;
+  width: 100%;
+  text-align: center;
+}
+
+#name img {
+  margin-bottom: 5px;
+}
+
+#social img {
+  width: 30px;
+  height: 30px;
+  margin-right: 20px;
+  opacity: 0.7;
+}
+
+#social img:hover {
+  opacity: 1;
+}
+
+#social a:last-child img {
+  margin-right: 0px;
+}
+
+/* Fade effects for images that change opacity */
+img {
+  -webkit-transition-property: opacity;
+  -webkit-transition-duration: 0.2s;
+  -webkit-transition-timing-function: linear;
+  -moz-transition-property: opacity;
+  -moz-transition-duration: 0.2s;
+  -moz-transition-timing-function: linear;
+  -ms-transition-property: opacity;
+  -ms-transition-duration: 0.2s;
+  -ms-transition-timing-function: linear;
+  -o-transition-property: opacity;
+  -o-transition-duration: 0.2s;
+  -o-transition-timing-function: linear;
+  transition-property: opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: linear;
+}
+
+/* Adjustments for medium screens */
+@media (min-width:400px) {
+  /* Expand #name and #social at 400px+ wide */
+  #name, #social {
+    width: 49%;
+    padding-bottom: 0px;
+  }
+  
+  #name {
+    text-align: left;
+  }
+  
+  #social {
+    text-align: right;
+  }
+}
+
+
+/* Adjustments for wide screens */
+@media (min-width:960px) {
+  /* Fix top header on wide screens */
+  header.main {
+    position: fixed;
+  }
+  #content {
+    margin-top: 52px;
+  }
+  
+  /* Adjust content for wide screens */
+
+  #content > * {
+    padding: 40px;
+  }
+  
+  /* Don't add a bottom margin after individual articles on a page.
+   * This is namely to get around h1 tags getting different margins
+   * than h2-h6. There may be a better way to do this.
+   */
+  #content article > p:last-child {
+    margin-bottom: 0px;
+  }
+  
+  /* Leave extra space after the content,
+   * but not between sections.
+   */
+  #content > :not(:last-child) {
+    padding-bottom: 0px;
+  }
+  
+  #content .title-nav {
+    padding: 0;
+  }
+}

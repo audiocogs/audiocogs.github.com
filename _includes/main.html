@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+{% assign title_suffix = "" %}
+{% if page.title and page.title != '' %}
+	{% assign title_suffix = " &mdash; " %}
+{% endif %}
+{% assign date_prefix = "" %}
+{% if page.date and page.date != '' and page.author and page.author != '' %}
+	{% assign date_prefix = " on " %}
+{% endif %}
+<html>
+<head>
+	<meta charset="utf-8"> 
+	<title>{{ page.title }}{{ title_suffix }}Audiocogs</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<link rel="stylesheet" type="text/css" href="/css/all.min.css">
+	<link rel="shortcut icon" href="/favicon.ico">
+	<!--[if lt IE 9]>
+	<script src="/scripts/html5shiv.js"></script>
+	<![endif]-->
+
+	<link rel="alternate" type="application/rss+xml" title="Audiocogs Blog" href="/rss.xml">
+</head>
+<body class="{{ page.layout }}">
+<section>
+	<header class="main">
+		<div class="inner">
+		<h1>
+			<div id="name">
+				<a href="/">Audiocogs</a>
+			</div>
+			<div id="social">
+				<a href="http://twitter.com/audiocogs"><img id="twitterbird" class="twitter" width="30" height="30" src="/images/white-twitter.png" alt="Audiocogs on twitter."></a>
+				<a href="https://github.com/audiocogs"><img id="white-octocat" class="github" width="30" height="30" src="/images/white-octocat.png" alt="Audiocogs on github."></a>
+			</div>
+		</h1>
+		</div>
+	</header>
+	<section id="content">
+		<div class="title-nav">
+			<ul>
+{% unless codec_page %}
+				<li><a href="/">Home</a></li>
+				<li><a href="/articles">Articles</a></li>
+{% endunless %}
+        <li><a href="/codecs">Codecs</a></li>
+{% if codec_page %}
+        <li><a href="/codecs/mp3">MP3</a></li>
+        <li><a href="/codecs/alac">ALAC</a></li>
+        <li><a href="/codecs/flac">FLAC</a></li>
+        <li><a href="/codecs/aac">AAC</a></li>
+{% endif %}
+			</ul>
+		</div>
+{% unless raw %}
+		<article>
+			<header>
+				{% if page.title %}
+				<h1 id="article_title">{{ page.title }}</h1>
+				{% endif %}
+				{% if page.author or page.date %}
+				<p id="author_date">{{ page.author }}{{ date_prefix }}{{ page.date | date: '%B %d, %Y' }}</p>
+				{% endif %}
+			</header>
+{% endunless %}
+{{ prefix }}
+{{ content }}
+{{ postfix }}
+{% unless raw %}
+		</article>
+{% endunless %}
+	</section>
+</section>
+</body>
+</html>

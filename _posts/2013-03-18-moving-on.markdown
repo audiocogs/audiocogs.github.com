@@ -1,0 +1,13 @@
+---
+title: "Moving on: the end of Official.fm Labs and the beginning of Audiocogs"
+date: March 18, 2013
+layout: post
+---
+
+At Official.fm Labs, we set to change the face of web audio and push the boundaries of what you can do in a browser. With developers around both Europe and the USA, we developed a [cross-browser audio framework](https://github.com/audiocogs/aurora.js), and ported audio decoders to allow pure JavaScript playback. We take great pride in the fact that we've made it possible to play [MP3](https://github.com/audiocogs/jsmad), [AAC](https://github.com/audiocogs/aac.js), [ALAC](https://github.com/audiocogs/alac.js) and [FLAC](https://github.com/audiocogs/flac.js) in modern browsers without any plugins. We [spoke at conferences](https://speakerdeck.com/nddrylliog/jsmad-what-why-how-jsconf-eu-2012) and worked on [fun projects](https://github.com/audiocogs/pitch.js) at music hack days.
+
+However, as time passed, several members have left to pursue other work interests, and it has become incresingly difficult to take up the web audio challenge.  We have decided that it is time to move on, but while Official.fm Labs is no more, many of its former members will continue to contribute to our open source projects in their spare time.  We have moved our Github repositories to a new Audiocogs group, and you can see all of our open source projects at <http://github.com/audiocogs>.
+
+We would like to thank all the people who made this fantastic adventure possible: Official.fm Labs founder Amos Wenger, Music Hack Day organizers, fellow developers, and many others.  We could not have achieved what we did if we hadn't stood on the shoulders of giants.  We would also like to thank our parent company Official.fm for funding our efforts to make web audio better, and for letting us pursue and develop cutting edge web technology.
+
+We are looking forward to continuing our open source work through Audiocogs in the future, and continuing to make audio on the web better.  Please help us by contributing and using our code, and of course, reporting bugs.
