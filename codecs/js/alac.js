@@ -1,4 +1,5 @@
-var Aglib;
+(function() {
+    var Aglib;
 
 Aglib = (function() {
   var BITOFF, KB0, MAX_DATATYPE_BITS_16, MAX_PREFIX_16, MAX_PREFIX_32, MAX_RUN_DEFAULT, MB0, MDENSHIFT, MMULSHIFT, MOFF, N_MAX_MEAN_CLAMP, N_MEAN_CLAMP_VAL, PB0, QB, QBSHIFT, dyn_get_16, dyn_get_32, lead;
@@ -87,7 +88,7 @@ Aglib = (function() {
   dyn_get_16 = function(data, m, k) {
     var bitsInPrefix, offs, result, stream, v;
     offs = data.bitPosition;
-    stream = data.peekBig(32 - offs) << offs;
+    stream = data.peek(32 - offs) << offs;
     bitsInPrefix = lead(~stream);
     if (bitsInPrefix >= MAX_PREFIX_16) {
       data.advance(MAX_PREFIX_16 + MAX_DATATYPE_BITS_16);
@@ -110,11 +111,11 @@ Aglib = (function() {
   dyn_get_32 = function(data, m, k, maxbits) {
     var offs, result, stream, v;
     offs = data.bitPosition;
-    stream = data.peekBig(32 - offs) << offs;
+    stream = data.peek(32 - offs) << offs;
     result = lead(~stream);
     if (result >= MAX_PREFIX_32) {
       data.advance(MAX_PREFIX_32);
-      return data.readBig(maxbits);
+      return data.read(maxbits);
     } else {
       data.advance(result + 1);
       if (k !== 1) {
@@ -186,10 +187,7 @@ Aglib = (function() {
   return Aglib;
 
 })();
-
-
-
-var Dplib;
+    var Dplib;
 
 Dplib = (function() {
   var copy;
@@ -442,10 +440,7 @@ Dplib = (function() {
   return Dplib;
 
 })();
-
-
-
-var Matrixlib;
+    var Matrixlib;
 
 Matrixlib = (function() {
 
@@ -470,9 +465,7 @@ Matrixlib = (function() {
   return Matrixlib;
 
 })();
-
-
-var ALACDecoder,
+    var ALACDecoder,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -485,7 +478,7 @@ ALACDecoder = (function(_super) {
     return ALACDecoder.__super__.constructor.apply(this, arguments);
   }
 
-  Decoder.register('alac', ALACDecoder);
+  AV.Decoder.register('alac', ALACDecoder);
 
   ID_SCE = 0;
 
@@ -505,15 +498,12 @@ ALACDecoder = (function(_super) {
 
   ALACDecoder.prototype.setCookie = function(cookie) {
     var data, predictorBuffer, _base;
-    data = Stream.fromBuffer(cookie);
+    data = AV.Stream.fromBuffer(cookie);
     if (data.peekString(4, 4) === 'frma') {
       data.advance(12);
     }
     if (data.peekString(4, 4) === 'alac') {
       data.advance(12);
-    }
-    if (!data.available(24)) {
-      return this.emit('error', 'Cookie too short');
     }
     this.config = {
       frameLength: data.readUInt32(),
@@ -537,8 +527,8 @@ ALACDecoder = (function(_super) {
 
   ALACDecoder.prototype.readChunk = function(data) {
     var buf, bytesShifted, ch, chanBits, channelIndex, channels, coefs, count, dataByteAlignFlag, denShift, elementInstanceTag, end, escapeFlag, i, j, kb, maxRun, mb, mixBits, mixRes, mode, num, numChannels, out16, output, params, partialFrame, pb, pbFactor, samples, shift, shiftbits, status, table, tag, unused, val, _i, _j, _k, _l, _m, _n, _o, _ref, _ref1, _ref2;
-    if (!(this.bitstream.available(4096 << 6) || (this.receivedFinalBuffer && this.bitstream.available(32)))) {
-      return this.once('available', this.readChunk);
+    if (!this.stream.available(4)) {
+      return;
     }
     data = this.bitstream;
     samples = this.config.frameLength;
@@ -547,31 +537,28 @@ ALACDecoder = (function(_super) {
     output = new ArrayBuffer(samples * numChannels * this.config.bitDepth / 8);
     end = false;
     while (!end) {
-      if (!data.available(3)) {
-        break;
-      }
-      tag = data.readSmall(3);
+      tag = data.read(3);
       switch (tag) {
         case ID_SCE:
         case ID_LFE:
         case ID_CPE:
           channels = tag === ID_CPE ? 2 : 1;
           if (channelIndex + channels > numChannels) {
-            return this.emit('error', 'Too many channels!');
+            throw new Error('Too many channels!');
           }
-          elementInstanceTag = data.readSmall(4);
+          elementInstanceTag = data.read(4);
           unused = data.read(12);
           if (unused !== 0) {
-            return this.emit('error', 'Unused part of header does not contain 0, it should');
+            throw new Error('Unused part of header does not contain 0, it should');
           }
-          partialFrame = data.readOne();
-          bytesShifted = data.readSmall(2);
-          escapeFlag = data.readOne();
+          partialFrame = data.read(1);
+          bytesShifted = data.read(2);
+          escapeFlag = data.read(1);
           if (bytesShifted === 3) {
-            return this.emit('error', "Bytes are shifted by 3, they shouldn't be");
+            throw new Error("Bytes are shifted by 3, they shouldn't be");
           }
           if (partialFrame) {
-            samples = data.readBig(32);
+            samples = data.read(32);
           }
           if (escapeFlag === 0) {
             shift = bytesShifted * 8;
@@ -584,10 +571,10 @@ ALACDecoder = (function(_super) {
             num = [];
             coefs = [];
             for (ch = _i = 0; _i < channels; ch = _i += 1) {
-              mode[ch] = data.readSmall(4);
-              denShift[ch] = data.readSmall(4);
-              pbFactor[ch] = data.readSmall(3);
-              num[ch] = data.readSmall(5);
+              mode[ch] = data.read(4);
+              denShift[ch] = data.read(4);
+              pbFactor[ch] = data.read(3);
+              num[ch] = data.read(5);
               table = coefs[ch] = new Int16Array(32);
               for (i = _j = 0, _ref = num[ch]; _j < _ref; i = _j += 1) {
                 table[i] = data.read(16);
@@ -602,7 +589,7 @@ ALACDecoder = (function(_super) {
               params = Aglib.ag_params(mb, (pb * pbFactor[ch]) / 4, kb, samples, samples, maxRun);
               status = Aglib.dyn_decomp(params, data, this.predictor, samples, chanBits);
               if (!status) {
-                return this.emit('error', 'Error in Aglib.dyn_decomp');
+                throw new Error('Error in Aglib.dyn_decomp');
               }
               if (mode[ch] === 0) {
                 Dplib.unpc_block(this.predictor, this.mixBuffers[ch], samples, coefs[ch], num[ch], chanBits, denShift[ch]);
@@ -616,7 +603,7 @@ ALACDecoder = (function(_super) {
             shift = 32 - chanBits;
             for (i = _l = 0; _l < samples; i = _l += 1) {
               for (ch = _m = 0; _m < channels; ch = _m += 1) {
-                val = (data.readBig(chanBits) << shift) >> shift;
+                val = (data.read(chanBits) << shift) >> shift;
                 this.mixBuffers[ch][i] = val;
               }
             }
@@ -644,36 +631,37 @@ ALACDecoder = (function(_super) {
               }
               break;
             default:
-              return this.emit('error', 'Only supports 16-bit samples right now');
+              throw new Error('Only supports 16-bit samples right now');
           }
           channelIndex += channels;
           break;
         case ID_CCE:
         case ID_PCE:
-          return this.emit('error', "Unsupported element: " + tag);
+          throw new Error("Unsupported element: " + tag);
+          break;
         case ID_DSE:
-          elementInstanceTag = data.readSmall(4);
-          dataByteAlignFlag = data.readOne();
-          count = data.readSmall(8);
+          elementInstanceTag = data.read(4);
+          dataByteAlignFlag = data.read(1);
+          count = data.read(8);
           if (count === 255) {
-            count += data.readSmall(8);
+            count += data.read(8);
           }
           if (dataByteAlignFlag) {
             data.align();
           }
           data.advance(count * 8);
           if (!(data.pos < data.length)) {
-            return this.emit('error', 'buffer overrun');
+            throw new Error('buffer overrun');
           }
           break;
         case ID_FIL:
-          count = data.readSmall(4);
+          count = data.read(4);
           if (count === 15) {
-            count += data.readSmall(8) - 1;
+            count += data.read(8) - 1;
           }
           data.advance(count * 8);
           if (!(data.pos < data.length)) {
-            return this.emit('error', 'buffer overrun');
+            throw new Error('buffer overrun');
           }
           break;
         case ID_END:
@@ -681,15 +669,16 @@ ALACDecoder = (function(_super) {
           end = true;
           break;
         default:
-          return this.emit('error', "Unknown element: " + tag);
+          throw new Error("Unknown element: " + tag);
       }
       if (channelIndex > numChannels) {
-        return this.emit('error', 'Channel index too large.');
+        throw new Error('Channel index too large.');
       }
     }
-    return this.emit('data', new Int16Array(output));
+    return new Int16Array(output);
   };
 
   return ALACDecoder;
 
-})(Decoder);
+})(AV.Decoder);
+})();

@@ -28,11 +28,6 @@ function DGAuroraPlayer(player, DGPlayer) {
         DGPlayer.bufferProgress = percent;
     });
     
-    player.on('format', onformat = function(format) {
-        if (WebKitAudioDevice.supported && format.sampleRate !== window._sampleRate)
-            alert("This song's sample rate does not match your hardware's native sample rate. This may sound strange...");
-    });
-    
     player.on('progress', onprogress = function(time) {
         DGPlayer.seekTime = time;
     });
@@ -41,22 +36,12 @@ function DGAuroraPlayer(player, DGPlayer) {
         DGPlayer.duration = duration;
     });
     
-    function find(data, keys) {
-        for (var i = 0; i < keys.length; i++) {
-            var val = data[keys[i]];
-            if (val) return val;
-        }
-        
-        return 'Unknown ' + keys[0];
-    }
-    
     player.on('metadata', onmetadata = function(data) {
-        DGPlayer.songTitle = find(data, ['Title', 'TITLE', 'Title/Songname/Content description']);
-        DGPlayer.songArtist = find(data, ['Artist', 'Album Artist', 'ARTIST', 'Lead artist/Lead performer/Soloist/Performing group']);
+        DGPlayer.songTitle = data.title;
+        DGPlayer.songArtist = data.artist;
         
-        var buf = data['Cover Art'];
-        if (buf) {
-            DGPlayer.coverArt = buf.toBlobURL();
+        if (data.coverArt) {
+            DGPlayer.coverArt = data.coverArt.toBlobURL();
         } else {
             DGPlayer.coverArt = UNKNOWN_ART;
         }

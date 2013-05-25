@@ -1,3 +1,5 @@
+(function() {
+
 /*
  * FLAC.js - Free Lossless Audio Codec decoder in JavaScript
  * By Devon Govett and Jens Nockert of Official.fm Labs
@@ -14,8 +16,8 @@
  *
  */
 
-FLACDemuxer = Demuxer.extend(function() {
-    Demuxer.register(this);
+var FLACDemuxer = AV.Demuxer.extend(function() {
+    AV.Demuxer.register(this);
     
     this.probe = function(buffer) {
         return buffer.peekString(0, 4) === 'fLaC';
@@ -64,7 +66,7 @@ FLACDemuxer = Demuxer.extend(function() {
                         return this.emit('error', 'STREAMINFO size is wrong.');
                     
                     this.foundStreamInfo = true;
-                    var bitstream = new Bitstream(stream);
+                    var bitstream = new AV.Bitstream(stream);
                 
                     var cookie = {
                         minBlockSize: bitstream.read(16),
@@ -76,14 +78,14 @@ FLACDemuxer = Demuxer.extend(function() {
                     this.format = {
                         formatID: 'flac',
                         sampleRate: bitstream.read(20),
-                        channelsPerFrame: bitstream.readSmall(3) + 1,
-                        bitsPerChannel: bitstream.readSmall(5) + 1
+                        channelsPerFrame: bitstream.read(3) + 1,
+                        bitsPerChannel: bitstream.read(5) + 1
                     };
                 
                     this.emit('format', this.format);
                     this.emit('cookie', cookie);
                 
-                    var sampleCount = bitstream.readBig(36);
+                    var sampleCount = bitstream.read(36);
                     this.emit('duration', sampleCount / this.format.sampleRate * 1000 | 0);
                 
                     stream.advance(16); // skip MD5 hashes
@@ -100,10 +102,10 @@ FLACDemuxer = Demuxer.extend(function() {
                     
                     for (var i = 0; i < length; i++) {
                         len = stream.readUInt32(true);
-                        var str = stream.readUTF8(len),
+                        var str = stream.readString(len, 'utf8'),
                             idx = str.indexOf('=');
                             
-                        this.metadata[str.slice(0, idx)] = str.slice(idx + 1);
+                        this.metadata[str.slice(0, idx).toLowerCase()] = str.slice(idx + 1);
                     }
                     
                     // TODO: standardize field names across formats
@@ -126,7 +128,7 @@ FLACDemuxer = Demuxer.extend(function() {
                             picture = stream.readBuffer(length);
                     
                         this.metadata || (this.metadata = {});
-                        this.metadata['Cover Art'] = picture;
+                        this.metadata.coverArt = picture;
                     }
                     
                     // does anyone want the rest of the info?
@@ -143,12 +145,11 @@ FLACDemuxer = Demuxer.extend(function() {
         
         while (stream.available(1) && this.last) {
             var buffer = stream.readSingleBuffer(stream.remainingBytes());
-            this.emit('data', buffer, stream.remainingBytes() === 0);
+            this.emit('data', buffer);
         }
     }
     
-});
-/*
+});/*
  * FLAC.js - Free Lossless Audio Codec decoder in JavaScript
  * Original C version from FFmpeg (c) 2003 Alex Beregszaszi
  * JavaScript port by Devon Govett and Jens Nockert of Official.fm Labs
@@ -168,8 +169,8 @@ FLACDemuxer = Demuxer.extend(function() {
  *
  */
 
-FLACDecoder = Decoder.extend(function() {
-    Decoder.register('flac', this);
+var FLACDecoder = AV.Decoder.extend(function() {
+    AV.Decoder.register('flac', this);
     
     this.prototype.setCookie = function(cookie) {
         this.cookie = cookie;
@@ -204,19 +205,18 @@ FLACDecoder = Decoder.extend(function() {
     
     this.prototype.readChunk = function() {
         var stream = this.bitstream;
-        
-        if (!(stream.available(4096 << 6) || (this.receivedFinalBuffer && stream.available(48))))
-            return this.once('available', this.readChunk);
-                    
+        if (!stream.available(32))
+            return;
+                            
         // frame sync code
         if ((stream.read(15) & 0x7FFF) !== 0x7FFC)
-            return this.emit('error', 'Invalid sync code');
+            throw new Error('Invalid sync code');
             
-        var isVarSize = stream.readOne(),  // variable block size stream code
-            bsCode = stream.readSmall(4),  // block size
-            srCode = stream.readSmall(4),  // sample rate code
-            chMode = stream.readSmall(4),  // channel mode
-            bpsCode = stream.readSmall(3); // bits per sample
+        var isVarSize = stream.read(1),  // variable block size stream code
+            bsCode = stream.read(4),  // block size
+            srCode = stream.read(4),  // sample rate code
+            chMode = stream.read(4),  // channel mode
+            bpsCode = stream.read(3); // bits per sample
             
         stream.advance(1); // reserved bit
         
@@ -230,19 +230,19 @@ FLACDecoder = Decoder.extend(function() {
         } else if (chMode <= CHMODE_MID_SIDE) {
             channels = 2;
         } else {
-            return this.emit('error', 'Invalid channel mode');
+            throw new Error('Invalid channel mode');
         }
         
         if (channels !== this.format.channelsPerFrame)
-            return this.emit('error', 'Switching channel layout mid-stream not supported.');
+            throw new Error('Switching channel layout mid-stream not supported.');
         
         // bits per sample    
         if (bpsCode === 3 || bpsCode === 7)
-            return this.emit('error', 'Invalid sample size code');
+            throw new Error('Invalid sample size code');
             
         this.bps = SAMPLE_SIZES[bpsCode];
         if (this.bps !== this.format.bitsPerChannel)
-            return this.emit('error', 'Switching bits per sample mid-stream not supported.');
+            throw new Error('Switching bits per sample mid-stream not supported.');
         
         var sampleShift, is32;    
         if (this.bps > 16) {
@@ -256,7 +256,7 @@ FLACDecoder = Decoder.extend(function() {
         // sample number or frame number
         // see http://www.hydrogenaudio.org/forums/index.php?s=ea7085ffe6d57132c36e6105c0d434c9&showtopic=88390&pid=754269&st=0&#entry754269
         var ones = 0;
-        while (stream.readOne() === 1)
+        while (stream.read(1) === 1)
             ones++;
         
         var frame_or_sample_num = stream.read(7 - ones);
@@ -267,7 +267,7 @@ FLACDecoder = Decoder.extend(function() {
                 
         // block size
         if (bsCode === 0)
-            return this.emit('error', 'Reserved blocksize code');
+            throw new Error('Reserved blocksize code');
         else if (bsCode === 6)
             this.blockSize = stream.read(8) + 1;
         else if (bsCode === 7)
@@ -286,15 +286,13 @@ FLACDecoder = Decoder.extend(function() {
         else if (srCode === 14)
             sampleRate = stream.read(16) * 10;
         else
-            return this.emit('error', 'Invalid sample rate code');
+            throw new Error('Invalid sample rate code');
             
         stream.advance(8); // skip CRC check
         
         // subframes
-        for (var i = 0; i < channels; i++) {
-            if (this.decodeSubframe(i) < 0)
-                return this.emit('error', 'Error decoding subframe ' + i);
-        }
+        for (var i = 0; i < channels; i++)
+            this.decodeSubframe(i);
         
         stream.align();
         stream.advance(16); // skip CRC frame footer
@@ -346,7 +344,7 @@ FLACDecoder = Decoder.extend(function() {
                 break;
         }
         
-        this.emit('data', buf);
+        return buf;
     };
     
     this.prototype.decodeSubframe = function(channel) {
@@ -364,55 +362,46 @@ FLACDecoder = Decoder.extend(function() {
                 this.curr_bps++;
         }
         
-        if (stream.readOne()) {
-            this.emit('error', "Invalid subframe padding");
-            return -1;
-        }
+        if (stream.read(1))
+            throw new Error("Invalid subframe padding");
         
-        var type = stream.readSmall(6);
+        var type = stream.read(6);
         
-        if (stream.readOne()) {
+        if (stream.read(1)) {
             wasted = 1;
-            while (!stream.readOne())
+            while (!stream.read(1))
                 wasted++;
 
             this.curr_bps -= wasted;
         }
         
-        if (this.curr_bps > 32) {
-            this.emit('error', "decorrelated bit depth > 32 (" + this.curr_bps + ")");
-            return -1;
-        }
+        if (this.curr_bps > 32)
+            throw new Error("decorrelated bit depth > 32 (" + this.curr_bps + ")");
         
         if (type === 0) {
-            var tmp = stream.readSigned(this.curr_bps);
+            var tmp = stream.read(this.curr_bps, true);
             for (var i = 0; i < blockSize; i++)
                 decoded[channel][i] = tmp;
                 
         } else if (type === 1) {
             var bps = this.curr_bps;
             for (var i = 0; i < blockSize; i++)
-                decoded[channel][i] = stream.readSigned(bps);
+                decoded[channel][i] = stream.read(bps, true);
                 
         } else if ((type >= 8) && (type <= 12)) {
-            if (this.decode_subframe_fixed(channel, type & ~0x8) < 0)
-                return -1;
+            this.decode_subframe_fixed(channel, type & ~0x8);
                 
         } else if (type >= 32) {
-            if (this.decode_subframe_lpc(channel, (type & ~0x20) + 1) < 0)
-                return -1;
+            this.decode_subframe_lpc(channel, (type & ~0x20) + 1);
 
         } else {
-            this.emit('error', "Invalid coding type");
-            return -1;
+            throw new Error("Invalid coding type");
         }
         
         if (wasted) {
             for (var i = 0; i < blockSize; i++)
                 decoded[channel][i] <<= wasted;
         }
-
-        return 0;
     };
     
     this.prototype.decode_subframe_fixed = function(channel, predictor_order) {
@@ -422,10 +411,9 @@ FLACDecoder = Decoder.extend(function() {
     
         // warm up samples
         for (var i = 0; i < predictor_order; i++)
-            decoded[i] = stream.readSigned(bps);
+            decoded[i] = stream.read(bps, true);
     
-        if (this.decode_residuals(channel, predictor_order) < 0)
-            return -1;
+        this.decode_residuals(channel, predictor_order);
         
         var a = 0, b = 0, c = 0, d = 0;
         
@@ -465,11 +453,8 @@ FLACDecoder = Decoder.extend(function() {
                 break;
                 
             default:
-                this.emit('error', "Invalid Predictor Order " + predictor_order);
-                return -1;
+                throw new Error("Invalid Predictor Order " + predictor_order);
         }
-         
-        return 0;
     };
     
     this.prototype.decode_subframe_lpc = function(channel, predictor_order) {
@@ -480,34 +465,26 @@ FLACDecoder = Decoder.extend(function() {
             
         // warm up samples
         for (var i = 0; i < predictor_order; i++) {
-            decoded[i] = stream.readSigned(bps);
+            decoded[i] = stream.read(bps, true);
         }
 
-        var coeff_prec = stream.readSmall(4) + 1;
-        if (coeff_prec === 16) {
-            this.emit('error', "Invalid coefficient precision");
-            return -1;
-        }
+        var coeff_prec = stream.read(4) + 1;
+        if (coeff_prec === 16)
+            throw new Error("Invalid coefficient precision");
         
-        var qlevel = stream.readSigned(5);
-        if (qlevel < 0) {
-            this.emit('error', "Negative qlevel, maybe buggy stream");
-            return -1;
-        }
+        var qlevel = stream.read(5, true);
+        if (qlevel < 0)
+            throw new Error("Negative qlevel, maybe buggy stream");
         
         var coeffs = new Int32Array(32);
         for (var i = 0; i < predictor_order; i++) {
-            coeffs[i] = stream.readSigned(coeff_prec);
+            coeffs[i] = stream.read(coeff_prec, true);
         }
         
-        if (this.decode_residuals(channel, predictor_order) < 0) {
-            return -1;
-        }
+        this.decode_residuals(channel, predictor_order);
         
-        if (this.bps > 16) {
-            this.emit('error', "no 64-bit integers in JS, could probably use doubles though");
-            return -1;
-        }
+        if (this.bps > 16)
+            throw new Error("no 64-bit integers in JS, could probably use doubles though");
             
         for (var i = predictor_order; i < blockSize - 1; i += 2) {
             var d = decoded[i - predictor_order],
@@ -534,40 +511,34 @@ FLACDecoder = Decoder.extend(function() {
 
             decoded[i] += (sum >> qlevel);
         }
-
-        return 0;
     };
     
     const INT_MAX = 32767;
     
     this.prototype.decode_residuals = function(channel, predictor_order) {
         var stream = this.bitstream,
-            method_type = stream.readSmall(2);
+            method_type = stream.read(2);
             
-        if (method_type > 1) {
-            this.emit('error', 'Illegal residual coding method ' + method_type);
-            return -1;
-        }
+        if (method_type > 1)
+            throw new Error('Illegal residual coding method ' + method_type);
         
-        var rice_order = stream.readSmall(4),
+        var rice_order = stream.read(4),
             samples = (this.blockSize >>> rice_order);
             
-        if (predictor_order > samples) {
-            this.emit('error', 'Invalid predictor order ' + predictor_order + ' > ' + samples);
-            return -1;
-        }
+        if (predictor_order > samples)
+            throw new Error('Invalid predictor order ' + predictor_order + ' > ' + samples);
         
         var decoded = this.decoded[channel],
             sample = predictor_order, 
             i = predictor_order;
         
         for (var partition = 0; partition < (1 << rice_order); partition++) {
-            var tmp = stream.readSmall(method_type === 0 ? 4 : 5);
+            var tmp = stream.read(method_type === 0 ? 4 : 5);
 
             if (tmp === (method_type === 0 ? 15 : 31)) {
-                tmp = stream.readSmall(5);
+                tmp = stream.read(5);
                 for (; i < samples; i++)
-                    decoded[sample++] = stream.readSigned(tmp);
+                    decoded[sample++] = stream.read(tmp, true);
                     
             } else {
                 for (; i < samples; i++)
@@ -576,8 +547,6 @@ FLACDecoder = Decoder.extend(function() {
             
             i = 0;
         }
-        
-        return 0;
     };
     
     const MIN_CACHE_BITS = 25;
@@ -585,7 +554,7 @@ FLACDecoder = Decoder.extend(function() {
     this.prototype.golomb = function(k, limit, esc_len) {
         var data = this.bitstream,
             offset = data.bitPosition,
-            buf = data.peekBig(32 - offset) << offset,
+            buf = data.peek(32 - offset) << offset,
             v = 0;
         
         var log = 31 - clz(buf | 1); // log2(buf)
@@ -599,7 +568,7 @@ FLACDecoder = Decoder.extend(function() {
             
         } else {
             for (var i = 0; data.read(1) === 0; i++)
-                buf = data.peekBig(32 - offset) << offset;
+                buf = data.peek(32 - offset) << offset;
 
             if (i < limit - 1) {
                 if (k)
@@ -667,3 +636,4 @@ FLACDecoder = Decoder.extend(function() {
         return output + 4;
     }
 });
+})();

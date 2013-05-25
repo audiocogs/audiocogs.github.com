@@ -20,8 +20,90 @@
 
 (function() {
     
-
-/*
+const SAMPLE_RATES = new Int32Array([
+    96000, 88200, 64000, 48000, 44100, 32000,
+    24000, 22050, 16000, 12000, 11025, 8000, 7350    
+]);
+    
+var ADTSDemuxer = AV.Demuxer.extend(function() {
+    AV.Demuxer.register(this);
+    
+    this.probe = function(stream) {
+        return (stream.peekUInt16() & 0xfff6) === 0xfff0;
+        // var offset = stream.offset;
+        // 
+        // // attempt to find ADTS syncword
+        // while (stream.available(2)) {
+        //     if ((stream.readUInt16() & 0xfff6) === 0xfff0) {
+        //         stream.seek(offset);
+        //         return true;
+        //     }
+        // }
+        // 
+        // stream.seek(offset);
+        // return false;
+    };
+        
+    this.prototype.init = function() {
+        this.bitstream = new AV.Bitstream(this.stream);
+    };
+    
+    // Reads an ADTS header
+    // See http://wiki.multimedia.cx/index.php?title=ADTS
+    this.readHeader = function(stream) {
+        if (stream.read(12) !== 0xfff)
+            throw new Error('Invalid ADTS header.');
+            
+        var ret = {};
+        stream.advance(3); // mpeg version and layer
+        var protectionAbsent = !!stream.read(1);
+        
+        ret.profile = stream.read(2) + 1;
+        ret.samplingIndex = stream.read(4);
+        
+        stream.advance(1); // private
+        ret.chanConfig = stream.read(3);
+        stream.advance(4); // original/copy, home, copywrite, and copywrite start
+        
+        ret.frameLength = stream.read(13);
+        stream.advance(11); // fullness
+        
+        ret.numFrames = stream.read(2) + 1;
+        
+        if (!protectionAbsent)
+            stream.advance(16);
+        
+        return ret;
+    };
+    
+    this.prototype.readChunk = function() {
+        if (!this.sentHeader) {
+            var offset = this.stream.offset;
+            var header = ADTSDemuxer.readHeader(this.bitstream);
+            
+            this.emit('format', {
+                formatID: 'aac ',
+                sampleRate: SAMPLE_RATES[header.samplingIndex],
+                channelsPerFrame: header.chanConfig,
+                bitsPerChannel: 16
+            });
+            
+            // generate a magic cookie from the ADTS header
+            var cookie = new Uint8Array(2);
+            cookie[0] = (header.profile << 3) | ((header.samplingIndex >> 1) & 7);
+            cookie[1] = ((header.samplingIndex & 1) << 7) | (header.chanConfig << 3);
+            this.emit('cookie', new AV.Buffer(cookie));
+            
+            this.stream.seek(offset);
+            this.sentHeader = true;
+        }
+        
+        while (this.stream.available(1)) {
+            var buffer = this.stream.readSingleBuffer(this.stream.remainingBytes());
+            this.emit('data', buffer);
+        }
+    };
+});/*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -40,7 +122,6 @@
  * License along with this library.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 /*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
@@ -232,8 +313,7 @@ const IQ_TABLE = (function() {
     }
     
     return table;
-})();
-/*
+})();/*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -1663,13 +1743,13 @@ var Huffman = (function() {
         findOffset: function(stream, table) {
             var off = 0,
                 len = table[off][0],
-                cw = stream.readSmall(len);
+                cw = stream.read(len);
                 
             while (cw !== table[off][1]) {
                 var j = table[++off][0] - len;
                 len = table[off][0];
                 cw <<= j;
-                cw |= stream.readSmall(j); // TODO: find out why stream.read(j) returns weird values here
+                cw |= stream.read(j);
             }
             
             return off;
@@ -1677,17 +1757,17 @@ var Huffman = (function() {
         
         signValues: function(stream, data, off, len) {
             for (var i = off; i < off + len; i++) {
-                if (data[i] && stream.readOne())
+                if (data[i] && stream.read(1))
                     data[i] = -data[i];
             }
         },
         
         getEscape: function(stream, s) {
             var i = 4;
-            while (stream.readOne())
+            while (stream.read(1))
                 i++;
                 
-            var j = stream.readSmall(i) | (1 << i);
+            var j = stream.read(i) | (1 << i);
             return s < 0 ? -j : j;
         },
         
@@ -1729,8 +1809,7 @@ var Huffman = (function() {
     
     return Huffman;
     
-})();
-/*
+})();/*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -1804,8 +1883,8 @@ var TNS = (function() {
             bits = info.windowSequence === ICStream.EIGHT_SHORT_SEQUENCE ? SHORT_BITS : LONG_BITS;
         
         for (var w = 0; w < windowCount; w++) {
-            if (this.nFilt[w] = stream.readSmall(bits[0])) {
-                var coefRes = stream.readOne(),
+            if (this.nFilt[w] = stream.read(bits[0])) {
+                var coefRes = stream.read(1),
                     nFilt_w = this.nFilt[w],
                     length_w = this.length[w],
                     order_w = this.order[w],
@@ -1813,14 +1892,14 @@ var TNS = (function() {
                     coef_w = this.coef[w];
                 
                 for (var filt = 0; filt < nFilt_w; filt++) {
-                    length_w[filt] = stream.readSmall(bits[1]);
+                    length_w[filt] = stream.read(bits[1]);
                     
-                    if ((order_w[filt] = stream.readSmall(bits[2])) > 20)
+                    if ((order_w[filt] = stream.read(bits[2])) > 20)
                         throw new Error("TNS filter out of range: " + order_w[filt]);
                     
                     if (order_w[filt]) {
-                        direction_w[filt] = !!stream.readOne();
-                        var coefCompress = stream.readOne(),
+                        direction_w[filt] = !!stream.read(1);
+                        var coefCompress = stream.read(1),
                             coefLen = coefRes + 3 - coefCompress,
                             tmp = 2 * coefCompress + coefRes,
                             table = TNS_TABLES[tmp],
@@ -1828,7 +1907,7 @@ var TNS = (function() {
                             coef_w_filt = coef_w[filt];
                             
                         for (var i = 0; i < order_w_filt; i++)
-                            coef_w_filt[i] = table[stream.readSmall(coefLen)];
+                            coef_w_filt[i] = table[stream.read(coefLen)];
                     }
                         
                 }
@@ -1913,7 +1992,6 @@ var TNS = (function() {
     return TNS;
 
 })();
-
 var ICStream = (function() {
     
     // Individual Channel Stream
@@ -1956,18 +2034,18 @@ var ICStream = (function() {
             this.decodeBandTypes(stream, config);
             this.decodeScaleFactors(stream);
             
-            if (this.pulsePresent = stream.readOne()) {
+            if (this.pulsePresent = stream.read(1)) {
                 if (this.info.windowSequence === ICStream.EIGHT_SHORT_SEQUENCE)
                     throw new Error("Pulse tool not allowed in eight short sequence.");
                     
                 this.decodePulseData(stream);
             }
             
-            if (this.tnsPresent = stream.readOne()) {
+            if (this.tnsPresent = stream.read(1)) {
                 this.tns.decode(stream, this.info);
             }
             
-            if (this.gainPresent = stream.readOne()) {
+            if (this.gainPresent = stream.read(1)) {
                 throw new Error("TODO: decode gain control/SSR");
             }
             
@@ -1987,13 +2065,13 @@ var ICStream = (function() {
                 var k = 0;
                 while (k < maxSFB) {
                     var end = k,
-                        bandType = stream.readSmall(4);
+                        bandType = stream.read(4);
                         
                     if (bandType === 12)
                         throw new Error("Invalid band type: 12");
                         
                     var incr;
-                    while ((incr = stream.readSmall(bits)) === escape)
+                    while ((incr = stream.read(bits)) === escape)
                         end += incr;
                         
                     end += incr;
@@ -2042,7 +2120,7 @@ var ICStream = (function() {
                         case ICStream.NOISE_BT:
                             for(; i < runEnd; i++, idx++) {
                                 if (noiseFlag) {
-                                    offset[1] += stream.readSmall(9) - 256;
+                                    offset[1] += stream.read(9) - 256;
                                     noiseFlag = false;
                                 } else {
                                     offset[1] += Huffman.decodeScaleFactor(stream) - SF_DELTA;
@@ -2067,8 +2145,8 @@ var ICStream = (function() {
         },
         
         decodePulseData: function(stream) {
-            var pulseCount = stream.readSmall(2) + 1,
-                pulseSWB = stream.readSmall(6);
+            var pulseCount = stream.read(2) + 1,
+                pulseSWB = stream.read(6);
                 
             if (pulseSWB >= this.info.swbCount)
                 throw new Error("Pulse SWB out of range: " + pulseSWB);
@@ -2079,18 +2157,18 @@ var ICStream = (function() {
                 this.pulseAmp = new Int32Array(pulseCount);
             }
             
-            this.pulseOffset[0] = this.info.swbOffsets[pulseSWB] + stream.readSmall(5);
-            this.pulseAmp[0] = stream.readSmall(4);
+            this.pulseOffset[0] = this.info.swbOffsets[pulseSWB] + stream.read(5);
+            this.pulseAmp[0] = stream.read(4);
             
             if (this.pulseOffset[0] > 1023)
                 throw new Error("Pulse offset out of range: " + this.pulseOffset[0]);
             
             for (var i = 1; i < pulseCount; i++) {
-                this.pulseOffset[i] = stream.readSmall(5) + this.pulseOffset[i - 1];
+                this.pulseOffset[i] = stream.read(5) + this.pulseOffset[i - 1];
                 if (this.pulseOffset[i] > 1023)
                     throw new Error("Pulse offset out of range: " + this.pulseOffset[i]);
                     
-                this.pulseAmp[i] = stream.readSmall(4);
+                this.pulseAmp[i] = stream.read(4);
             }
         },
         
@@ -2173,17 +2251,17 @@ var ICStream = (function() {
         decode: function(stream, config, commonWindow) {
             stream.advance(1); // reserved
             
-            this.windowSequence = stream.readSmall(2);
+            this.windowSequence = stream.read(2);
             this.windowShape[0] = this.windowShape[1];
-            this.windowShape[1] = stream.readOne();
+            this.windowShape[1] = stream.read(1);
             
             this.groupCount = 1;
             this.groupLength[0] = 1;
             
             if (this.windowSequence === ICStream.EIGHT_SHORT_SEQUENCE) {
-                this.maxSFB = stream.readSmall(4);
+                this.maxSFB = stream.read(4);
                 for (var i = 0; i < 7; i++) {
-                    if (stream.readOne()) {
+                    if (stream.read(1)) {
                         this.groupLength[this.groupCount - 1]++;
                     } else {
                         this.groupCount++;
@@ -2196,11 +2274,11 @@ var ICStream = (function() {
                 this.swbCount = SWB_SHORT_WINDOW_COUNT[config.sampleIndex];
                 this.predictorPresent = false;
             } else {
-                this.maxSFB = stream.readSmall(6);
+                this.maxSFB = stream.read(6);
                 this.windowCount = 1;
                 this.swbOffsets = SWB_OFFSET_1024[config.sampleIndex];
                 this.swbCount = SWB_LONG_WINDOW_COUNT[config.sampleIndex];
-                this.predictorPresent = !!stream.readOne();
+                this.predictorPresent = !!stream.read(1);
                 
                 if (this.predictorPresent)
                     this.decodePrediction(stream, config, commonWindow);
@@ -2227,7 +2305,26 @@ var ICStream = (function() {
     
     return ICStream;
     
-})();
+})();/*
+ * AAC.js - Advanced Audio Coding decoder in JavaScript
+ * Created by Devon Govett
+ * Copyright (c) 2012, Official.fm Labs
+ *
+ * AAC.js is free software; you can redistribute it and/or modify it 
+ * under the terms of the GNU Lesser General Public License as 
+ * published by the Free Software Foundation; either version 3 of the 
+ * License, or (at your option) any later version.
+ *
+ * AAC.js is distributed in the hope that it will be useful, but WITHOUT 
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY 
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 
 var CPEElement = (function() {
     
@@ -2250,18 +2347,18 @@ var CPEElement = (function() {
             right = this.right,
             ms_used = this.ms_used;
             
-        if (this.commonWindow = !!stream.readOne()) {
+        if (this.commonWindow = !!stream.read(1)) {
             left.info.decode(stream, config, true);
             right.info = left.info;
     
-            var mask = stream.readSmall(2);
+            var mask = stream.read(2);
             this.maskPresent = !!mask;
             
             switch (mask) {
                 case MASK_TYPE_USED:
                     var len = left.info.groupCount * left.info.maxSFB;
                     for (var i = 0; i < len; i++) {
-                        ms_used[i] = !!stream.readOne();
+                        ms_used[i] = !!stream.read(1);
                     }
                     break;
                 
@@ -2287,8 +2384,7 @@ var CPEElement = (function() {
     
     return CPEElement;
     
-})();
-/*
+})();/*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -2336,17 +2432,17 @@ var CCEElement = (function() {
                 idSelect = this.idSelect,
                 chSelect = this.chSelect;
     
-            this.couplingPoint = 2 * stream.readOne();
-            this.coupledCount = stream.readSmall(3);
+            this.couplingPoint = 2 * stream.read(1);
+            this.coupledCount = stream.read(3);
     
             var gainCount = 0;
             for (var i = 0; i <= this.coupledCount; i++) {
                 gainCount++;
-                channelPair[i] = stream.readOne();
-                idSelect[i] = stream.readSmall(4);
+                channelPair[i] = stream.read(1);
+                idSelect[i] = stream.read(4);
     
                 if (channelPair[i]) {
-                    chSelect[i] = stream.readSmall(2);
+                    chSelect[i] = stream.read(2);
                     if (chSelect[i] === 3)
                         gainCount++;
     
@@ -2355,10 +2451,10 @@ var CCEElement = (function() {
                 }
             }
     
-            this.couplingPoint += stream.readOne() || (this.couplingPoint >>> 1);
+            this.couplingPoint += stream.read(1) || (this.couplingPoint >>> 1);
     
-            var sign = stream.readOne(),
-                scale = CCE_SCALE[stream.readSmall(2)];
+            var sign = stream.read(1),
+                scale = CCE_SCALE[stream.read(2)];
     
             this.ics.decode(stream, config, false);
     
@@ -2373,7 +2469,7 @@ var CCEElement = (function() {
                     gainCache = 1;
     
                 if (i > 0) {
-                    cge = this.couplingPoint === CCEElement.AFTER_IMDCT ? 1 : stream.readOne();
+                    cge = this.couplingPoint === CCEElement.AFTER_IMDCT ? 1 : stream.read(1);
                     gain = cge ? Huffman.decodeScaleFactor(stream) - 60 : 0;
                     gainCache = Math.pow(scale, -gain);
                 }
@@ -2448,8 +2544,7 @@ var CCEElement = (function() {
     
     return CCEElement;
     
-})();
-/*
+})();/*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -2469,7 +2564,6 @@ var CCEElement = (function() {
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 /*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
@@ -2489,7 +2583,6 @@ var CCEElement = (function() {
  * License along with this library.
  * If not, see <http://www.gnu.org/licenses/>.
  */
-
 
 /*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
@@ -3637,8 +3730,7 @@ const MDCT_TABLE_240 = [
     [0.006864449533597, 0.091028636515846],
     [0.004479245345574, 0.091177133616206],
     [0.002090971306534, 0.091263142463585]
-];                    
-/*
+];                    /*
  * AAC.js - Advanced Audio Coding decoder in JavaScript
  * Created by Devon Govett
  * Copyright (c) 2012, Official.fm Labs
@@ -3804,10 +3896,10 @@ var FFT = (function() {
                 input[i + 3][0] = e1[0];
                 input[i + 3][1] = e1[1];
             } else {
-                input[i + 1][0] = e1[0];
-                input[i + 1][1] = e1[1];
-                input[i + 3][0] = e2[0];
-                input[i + 3][1] = e2[1];
+                input[i + 1][0] = e1[0];
+                input[i + 1][1] = e1[1];
+                input[i + 3][0] = e2[0];
+                input[i + 3][1] = e2[1];
             }
         }
     
@@ -3836,7 +3928,6 @@ var FFT = (function() {
     return FFT;
     
 })();
-
 // Modified Discrete Cosine Transform
 function MDCT(length) {
     this.N = length;
@@ -3929,7 +4020,6 @@ MDCT.prototype.process = function(input, inOffset, output, outOffset) {
         output[outOffset + N2 + N4 + 3 + 2 * k] = buf[N4 - 2 - k][0];
     }
 };
-
 var FilterBank = (function() {
   
   function FilterBank(smallFrames, channels) {
@@ -4076,10 +4166,10 @@ var FilterBank = (function() {
                   if(i >= trans) 
                       overlap[mid + 4 * shortLen + i - length] = (buf[shortLen * 7 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 8 + i] * shortWindows[i]);
   
-                  overlap[mid + 5 * shortLen + i - length] = (buf[shortLen * 9 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 10 + i] * shortWindows[i]);
-                  overlap[mid + 6 * shortLen + i - length] = (buf[shortLen * 11 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 12 + i]*shortWindows[i]);
-                  overlap[mid + 7 * shortLen + i - length] = (buf[shortLen * 13 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 14 + i]*shortWindows[i]);
-                  overlap[mid + 8 * shortLen + i - length] = (buf[shortLen * 15 + i] * shortWindows[shortLen - 1 - i]);
+                  overlap[mid + 5 * shortLen + i - length] = (buf[shortLen * 9 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 10 + i] * shortWindows[i]);
+                  overlap[mid + 6 * shortLen + i - length] = (buf[shortLen * 11 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 12 + i]*shortWindows[i]);
+                  overlap[mid + 7 * shortLen + i - length] = (buf[shortLen * 13 + i] * shortWindows[shortLen - 1 - i]) + (buf[shortLen * 14 + i]*shortWindows[i]);
+                  overlap[mid + 8 * shortLen + i - length] = (buf[shortLen * 15 + i] * shortWindows[shortLen - 1 - i]);
               }
   
               for (var i = 0; i < mid; i++) {
@@ -4117,15 +4207,9 @@ var FilterBank = (function() {
   return FilterBank;
     
 })();
-
-AACDecoder = Decoder.extend(function() {
-    Decoder.register('mp4a', this);
-    Decoder.register('aac ', this);
-    
-    const SAMPLE_RATES = new Int32Array([
-        96000, 88200, 64000, 48000, 44100, 32000,
-        24000, 22050, 16000, 12000, 11025, 8000, 7350    
-    ]);
+var AACDecoder = AV.Decoder.extend(function() {
+    AV.Decoder.register('mp4a', this);
+    AV.Decoder.register('aac ', this);
     
     // AAC profiles
     const AOT_AAC_MAIN = 1, // no
@@ -4144,17 +4228,17 @@ AACDecoder = Decoder.extend(function() {
           CHANNEL_CONFIG_SEVEN_PLUS_ONE = 8;
     
     this.prototype.setCookie = function(buffer) {
-        var data = Stream.fromBuffer(buffer),
-            stream = new Bitstream(data);
+        var data = AV.Stream.fromBuffer(buffer),
+            stream = new AV.Bitstream(data);
         
         this.format.bitsPerChannel = 16; // caf format doesn't encode this
         this.config = {};
         
-        this.config.profile = stream.readSmall(5);
+        this.config.profile = stream.read(5);
         if (this.config.profile === AOT_ESCAPE)
-            this.config.profile = 32 + stream.readSmall(6);
+            this.config.profile = 32 + stream.read(6);
             
-        this.config.sampleIndex = stream.readSmall(4);
+        this.config.sampleIndex = stream.read(4);
         if (this.config.sampleIndex === 0x0f) {
             this.config.sampleRate = stream.read(24);
             for (var i = 0; i < SAMPLE_RATES.length; i++) {
@@ -4167,25 +4251,26 @@ AACDecoder = Decoder.extend(function() {
             this.config.sampleRate = SAMPLE_RATES[this.config.sampleIndex];
         }
             
-        this.config.chanConfig = stream.readSmall(4);
+        this.config.chanConfig = stream.read(4);
+        this.format.channelsPerFrame = this.config.chanConfig; // sometimes m4a files encode this wrong
         
         switch (this.config.profile) {
             case AOT_AAC_MAIN:
             case AOT_AAC_LC:
             case AOT_AAC_LTP:
-                if (stream.readOne()) // frameLengthFlag
-                    return this.emit('error', 'frameLengthFlag not supported');
+                if (stream.read(1)) // frameLengthFlag
+                    throw new Error('frameLengthFlag not supported');
                     
                 this.config.frameLength = 1024;
                     
-                if (stream.readOne()) // dependsOnCoreCoder
+                if (stream.read(1)) // dependsOnCoreCoder
                     stream.advance(14); // coreCoderDelay
                     
-                if (stream.readOne()) { // extensionFlag
+                if (stream.read(1)) { // extensionFlag
                     if (this.config.profile > 16) { // error resiliant profile
-                        this.config.sectionDataResilience = stream.readOne();
-                        this.config.scalefactorResilience = stream.readOne();
-                        this.config.spectralDataResilience = stream.readOne();
+                        this.config.sectionDataResilience = stream.read(1);
+                        this.config.scalefactorResilience = stream.read(1);
+                        this.config.spectralDataResilience = stream.read(1);
                     }
                     
                     stream.advance(1);
@@ -4193,14 +4278,13 @@ AACDecoder = Decoder.extend(function() {
                 
                 if (this.config.chanConfig === CHANNEL_CONFIG_NONE) {
                     stream.advance(4) // element_instance_tag
-                    this.emit('error', 'PCE unimplemented');
+                    throw new Error('PCE unimplemented');
                 }
                 
                 break;
                 
             default:
-                this.emit('error', 'AAC profile ' + this.config.profile + ' not supported.');
-                return;
+                throw new Error('AAC profile ' + this.config.profile + ' not supported.');
         }
         
         this.filter_bank = new FilterBank(false, this.config.chanConfig);        
@@ -4222,12 +4306,9 @@ AACDecoder = Decoder.extend(function() {
     this.prototype.readChunk = function() {
         var stream = this.bitstream;
         
-        if (!stream.available(1))
-            return this.once('available', this.readChunk);
-        
-        if (stream.peek(12) === 0xfff) {
-            this.emit('error', 'adts header') // NOPE
-        }
+        // check if there is an ADTS header, and read it if so
+        if (stream.peek(12) === 0xfff)
+            ADTSDemuxer.readHeader(stream);
         
         this.cces = [];
         var elements = [],
@@ -4235,8 +4316,8 @@ AACDecoder = Decoder.extend(function() {
             frameLength = config.frameLength,
             elementType = null;
         
-        while ((elementType = stream.readSmall(3)) !== END_ELEMENT) {
-            var id = stream.readSmall(4);
+        while ((elementType = stream.read(3)) !== END_ELEMENT) {
+            var id = stream.read(4);
             
             switch (elementType) {
                 // single channel and low frequency elements
@@ -4265,11 +4346,11 @@ AACDecoder = Decoder.extend(function() {
                     
                 // data-stream element
                 case DSE_ELEMENT:
-                    var align = stream.readOne(),
-                        count = stream.readSmall(8);
+                    var align = stream.read(1),
+                        count = stream.read(8);
                         
                     if (count === 255)
-                        count += stream.readSmall(8);
+                        count += stream.read(8);
                         
                     if (align)
                         stream.align();
@@ -4293,7 +4374,7 @@ AACDecoder = Decoder.extend(function() {
                     break;
                     
                 default:
-                    return this.emit('error', 'Unknown element')
+                    throw new Error('Unknown element')
             }
         }
         
@@ -4312,7 +4393,7 @@ AACDecoder = Decoder.extend(function() {
             }
         }
         
-        this.emit('data', output);
+        return output;
     };
     
     this.prototype.process = function(elements) {

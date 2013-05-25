@@ -82,7 +82,7 @@ var _sampleRate = (function() {
         if (player)
             player.disconnect();
             
-        player = new DGAuroraPlayer(Player.fromURL(url), DGPlayer);
+        player = new DGAuroraPlayer(AV.Player.fromURL(url), DGPlayer);
         DGPlayer.off('play', onplay);
     });
     
@@ -91,7 +91,7 @@ var _sampleRate = (function() {
             if (player)
                 player.disconnect();
                 
-            player = new DGAuroraPlayer(Player.fromFile(file), DGPlayer);
+            player = new DGAuroraPlayer(AV.Player.fromFile(file), DGPlayer);
             DGPlayer.off('play', onplay);
         }
     });
