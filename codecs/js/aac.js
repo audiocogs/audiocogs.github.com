@@ -29,19 +29,18 @@ var ADTSDemuxer = AV.Demuxer.extend(function() {
     AV.Demuxer.register(this);
     
     this.probe = function(stream) {
-        return (stream.peekUInt16() & 0xfff6) === 0xfff0;
-        // var offset = stream.offset;
-        // 
-        // // attempt to find ADTS syncword
-        // while (stream.available(2)) {
-        //     if ((stream.readUInt16() & 0xfff6) === 0xfff0) {
-        //         stream.seek(offset);
-        //         return true;
-        //     }
-        // }
-        // 
-        // stream.seek(offset);
-        // return false;
+        var offset = stream.offset;
+        
+        // attempt to find ADTS syncword
+        while (stream.available(2)) {
+            if ((stream.readUInt16() & 0xfff6) === 0xfff0) {
+                stream.seek(offset);
+                return true;
+            }
+        }
+        
+        stream.seek(offset);
+        return false;
     };
         
     this.prototype.init = function() {
@@ -2451,7 +2450,8 @@ var CCEElement = (function() {
                 }
             }
     
-            this.couplingPoint += stream.read(1) || (this.couplingPoint >>> 1);
+            this.couplingPoint += stream.read(1);
+            this.couplingPoint |= (this.couplingPoint >>> 1);
     
             var sign = stream.read(1),
                 scale = CCE_SCALE[stream.read(2)];
@@ -4226,12 +4226,15 @@ var AACDecoder = AV.Decoder.extend(function() {
           CHANNEL_CONFIG_FIVE = 5,
           CHANNEL_CONFIG_FIVE_PLUS_ONE = 6,
           CHANNEL_CONFIG_SEVEN_PLUS_ONE = 8;
+          
+    this.prototype.init = function() {
+      this.format.floatingPoint = true;
+    }
     
     this.prototype.setCookie = function(buffer) {
         var data = AV.Stream.fromBuffer(buffer),
             stream = new AV.Bitstream(data);
         
-        this.format.bitsPerChannel = 16; // caf format doesn't encode this
         this.config = {};
         
         this.config.profile = stream.read(5);
@@ -4384,12 +4387,12 @@ var AACDecoder = AV.Decoder.extend(function() {
         // Interleave channels
         var data = this.data,
             channels = data.length,
-            output = new Int16Array(frameLength * channels),
+            output = new Float32Array(frameLength * channels),
             j = 0;
             
         for (var k = 0; k < frameLength; k++) {
             for (var i = 0; i < channels; i++) {
-                output[j++] = Math.max(Math.min(data[i][k], 32767), -32768);
+                output[j++] = data[i][k] / 32768;
             }
         }
         
@@ -4399,7 +4402,7 @@ var AACDecoder = AV.Decoder.extend(function() {
     this.prototype.process = function(elements) {
         var channels = this.config.chanConfig;
         
-        // if (channels === 1 && psPresent)
+        // if (channels === 1 &&  psPresent)
         // TODO: sbrPresent (2)
         var mult = 1;
         

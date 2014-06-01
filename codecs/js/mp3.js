@@ -3104,8 +3104,7 @@ Layer2.prototype.decodeSamples = function(stream, quantclass) {
         // requantize the sample
         sample[s] = (requantized + quantclass.D) * quantclass.C;
     }
-};
-/*
+};/*
  * These are the Huffman code words for Layer III.
  * The data for these tables are derived from Table B.7 of ISO/IEC 11172-3.
  *
@@ -3129,7 +3128,8 @@ var huffquad_V = function (v, w, x, y, hlen) {
             v: v,
             w: w,
             x: x,
-            y: y
+            y: y,
+            hlen: hlen
         }
     };
 };
